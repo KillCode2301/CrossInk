@@ -22,5 +22,10 @@ void renderNoRtcCombinedStatsPage(GfxRenderer& renderer, const MappedInputManage
                                   const GlobalReadingStats& deviceStats, const GlobalReadingStats* allDevicesStats,
                                   bool showButtonHints);
 
+void renderBooksWithStatsHomePage(GfxRenderer& renderer, const MappedInputManager* mappedInput,
+                                  const std::string& bookTitle, const BookReadingStats& bookStats,
+                                  float progressPercent, const GlobalReadingStats& deviceStats,
+                                  const GlobalReadingStats* allDevicesStats, bool showBookNavigation);
+
 void renderEditBookDatesPage(GfxRenderer& renderer, const MappedInputManager* mappedInput, const std::string& bookTitle,
                              const BookReadingStats& stats, int selectedField, bool showButtonHints);

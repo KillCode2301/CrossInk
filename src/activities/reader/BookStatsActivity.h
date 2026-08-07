@@ -1,12 +1,11 @@
 #pragma once
 
-#include <HalClock.h>
-
 #include <string>
 
 #include "../Activity.h"
 #include "BookReadingStats.h"
 #include "GlobalReadingStats.h"
+#include "ReadingStatsUtils.h"
 
 class BookStatsActivity final : public Activity {
   enum class Page : uint8_t { PerBook, ThisDevice, AllDevices, EditDates };
@@ -25,8 +24,8 @@ class BookStatsActivity final : public Activity {
   int selectedEditField = 0;
   bool didChangeStats = false;
 
-  bool hasEditableBook() const { return !bookCachePath.empty() && halClock.isAvailable(); }
-  bool usesNoRtcSingleScreenLayout() const { return !halClock.isAvailable(); }
+  bool hasEditableBook() const { return !bookCachePath.empty() && shouldShowRtcBasedReadingStats(); }
+  bool usesNoRtcSingleScreenLayout() const { return !shouldShowRtcBasedReadingStats(); }
   void refreshAllDevicesStats();
   void saveStats();
   void cycleEditField();

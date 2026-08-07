@@ -1,3 +1,12 @@
+## [Unreleased]
+
+### Added
+
+- Home → Reading Stats now opens a list of recent books that have stats, so you can view any tracked book without opening it first.
+- X3 Reading Stats now show days read this month, days read last month, and longest streak on the global All Books card.
+- Minimal Stats sleep screen now shows days read this month below the current reading streak.
+- Simulator can preview monthly reading stats with `CROSSINK_SIMULATOR_FAKE_RTC=1` and `CROSSINK_SIMULATOR_SEED_STATS=1`.
+
 ## [v1.4.0.1] - 2026-07-28
 
 ### Added

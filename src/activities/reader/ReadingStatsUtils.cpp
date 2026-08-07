@@ -4,6 +4,11 @@
 
 #include "CrossPointSettings.h"
 
+#ifdef SIMULATOR
+#include <cstdlib>
+#include <ctime>
+#endif
+
 namespace {
 constexpr const char* MONTH_NAMES[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -228,6 +233,55 @@ ReadingTimeBucket readingTimeBucketForHour(const uint8_t hour) {
   return ReadingTimeBucket::Night;
 }
 
+#ifdef SIMULATOR
+namespace {
+
+bool simulatorFakeRtcEnabled() {
+  const char* raw = std::getenv("CROSSINK_SIMULATOR_FAKE_RTC");
+  return raw != nullptr && raw[0] != '\0' && raw[0] != '0';
+}
+
+bool readSimulatorSystemDateTime(uint16_t& year, uint8_t& month, uint8_t& day, uint8_t& hour, uint8_t& minute) {
+  if (!simulatorFakeRtcEnabled()) {
+    return false;
+  }
+
+  const std::time_t now = std::time(nullptr);
+  if (now == static_cast<std::time_t>(-1)) {
+    return false;
+  }
+
+  std::tm localTime{};
+#if defined(_WIN32)
+  if (localtime_s(&localTime, &now) != 0) {
+    return false;
+  }
+#else
+  if (localtime_r(&now, &localTime) == nullptr) {
+    return false;
+  }
+#endif
+
+  year = static_cast<uint16_t>(localTime.tm_year + 1900);
+  month = static_cast<uint8_t>(localTime.tm_mon + 1);
+  day = static_cast<uint8_t>(localTime.tm_mday);
+  hour = static_cast<uint8_t>(localTime.tm_hour);
+  minute = static_cast<uint8_t>(localTime.tm_min);
+  return isValidReadingStatsDate({year, month, day});
+}
+
+}  // namespace
+#endif
+
+bool shouldShowRtcBasedReadingStats() {
+#ifdef SIMULATOR
+  if (simulatorFakeRtcEnabled()) {
+    return true;
+  }
+#endif
+  return halClock.isAvailable();
+}
+
 bool getCurrentLocalReadingStatsDateTime(ReadingStatsDateTime& outDateTime) {
   uint16_t year = 0;
   uint8_t month = 0;
@@ -235,8 +289,15 @@ bool getCurrentLocalReadingStatsDateTime(ReadingStatsDateTime& outDateTime) {
   uint8_t hour = 0;
   uint8_t minute = 0;
   if (!halClock.getDateTime(year, month, day, hour, minute)) {
+#ifdef SIMULATOR
+    if (!readSimulatorSystemDateTime(year, month, day, hour, minute)) {
+      outDateTime = {};
+      return false;
+    }
+#else
     outDateTime = {};
     return false;
+#endif
   }
 
   outDateTime.date = {year, month, day};
@@ -444,4 +505,41 @@ uint16_t computeReadingHistoryCurrentStreak(uint32_t anchorDay, const std::array
     streak++;
   }
   return streak;
+}
+
+bool isReadingHistoryDaySet(const uint32_t anchorDay, const std::array<uint8_t, READING_HISTORY_BYTES>& bits,
+                            const uint32_t dayIndex) {
+  if (anchorDay == 0 && !isBitSet(bits, 0)) {
+    return false;
+  }
+  if (dayIndex > anchorDay) {
+    return false;
+  }
+
+  const uint32_t delta = anchorDay - dayIndex;
+  if (delta >= READING_HISTORY_DAYS) {
+    return false;
+  }
+  return isBitSet(bits, static_cast<size_t>(delta));
+}
+
+uint16_t countReadingHistoryDaysInMonth(const uint32_t anchorDay,
+                                        const std::array<uint8_t, READING_HISTORY_BYTES>& bits, const uint16_t year,
+                                        const uint8_t month) {
+  if (month < 1 || month > 12) {
+    return 0;
+  }
+
+  uint16_t count = 0;
+  const uint8_t daysInThisMonth = daysInMonth(year, month);
+  for (uint8_t day = 1; day <= daysInThisMonth; ++day) {
+    const ReadingStatsDate date{year, month, day};
+    if (!isValidReadingStatsDate(date)) {
+      continue;
+    }
+    if (isReadingHistoryDaySet(anchorDay, bits, readingStatsDayIndex(date))) {
+      count++;
+    }
+  }
+  return count;
 }

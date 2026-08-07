@@ -125,6 +125,8 @@ and [File Formats](./file-formats.md).
 
 CrossInk tracks per-book reading stats automatically and aggregates them into global stats.
 
+From Home, **Reading Stats** opens a combined stats screen. The top card shows the most recent book with stats; use **Prev Book** / **Next Book** to browse other recent books that have stats. The bottom cards show all-time totals for this device and synced devices.
+
 Tracked stats include:
 
 - Total reading time
@@ -135,7 +137,9 @@ Tracked stats include:
 
 Recent CrossInk versions expanded this into a larger stats system, including synced totals, richer X3 stats screens, reading-streak and time charts, editable stat dates, idle-time filtering, reset controls, and all-time stats backup options.
 
-Reading stats can also be used as a sleep screen, including the Minimal Stats sleep screen on supported builds.
+On devices with a real-time clock (X3), global Reading Stats also show calendar **days read this month**, **days read last month**, and **longest streak** on the All Books card. These day counts come from the same 2-year reading-presence history used for streaks. They count days with any reading activity, not hours or pages for that month.
+
+Reading stats can also be used as a sleep screen, including the Minimal Stats sleep screen on supported builds. Minimal Stats shows the current reading streak and days read this month below the book cover.
 
 For two-device syncing, see [Reading Stats Sync](./reading-stats-sync.md).
 

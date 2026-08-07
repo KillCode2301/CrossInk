@@ -389,3 +389,7 @@ uint16_t GlobalReadingStats::displayLongestReadingStreak() const {
   return std::max(longestReadingStreak,
                   computeReadingHistoryLongestStreak(readingHistoryAnchorDay, readingHistoryBits));
 }
+
+uint16_t GlobalReadingStats::daysReadInMonth(const uint16_t year, const uint8_t month) const {
+  return countReadingHistoryDaysInMonth(readingHistoryAnchorDay, readingHistoryBits, year, month);
+}

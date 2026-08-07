@@ -43,3 +43,8 @@ struct BookReadingStats {
   // Output examples: "< 1 min", "45 min", "2h 30 min"
   static void formatDuration(uint32_t seconds, char* buf, size_t len);
 };
+
+inline bool hasAnyBookStats(const BookReadingStats& stats) {
+  return stats.sessionCount > 0 || stats.totalReadingSeconds > 0 || stats.totalPagesTurned > 0 || stats.isCompleted ||
+         stats.startDate.isValid() || stats.finishedDate.isValid();
+}

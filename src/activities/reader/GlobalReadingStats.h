@@ -47,4 +47,10 @@ struct GlobalReadingStats {
   void recordReadingSpan(const ReadingStatsDateTime& localStart, uint32_t seconds);
   uint16_t currentReadingStreak(const ReadingStatsDate* today) const;
   uint16_t displayLongestReadingStreak() const;
+  uint16_t daysReadInMonth(uint16_t year, uint8_t month) const;
 };
+
+inline bool hasAnyGlobalStats(const GlobalReadingStats& stats) {
+  return stats.totalSessions > 0 || stats.totalReadingSeconds > 0 || stats.totalPagesTurned > 0 ||
+         stats.completedBooks > 0 || stats.displayLongestReadingStreak() > 0;
+}
