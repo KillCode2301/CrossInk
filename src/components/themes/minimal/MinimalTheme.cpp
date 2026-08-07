@@ -151,6 +151,21 @@ void formatStreakStat(const GlobalReadingStats& globalStats, char* buf, const si
   snprintf(buf, len, tr(STR_STATS_DAY_STREAK_FORMAT), static_cast<unsigned>(streak));
 }
 
+void formatMonthDaysStat(const GlobalReadingStats& globalStats, char* buf, const size_t len) {
+  if (len == 0) {
+    return;
+  }
+
+  ReadingStatsDateTime today;
+  if (!getCurrentLocalReadingStatsDateTime(today)) {
+    snprintf(buf, len, "-");
+    return;
+  }
+
+  const uint16_t days = globalStats.daysReadInMonth(today.date.year, today.date.month);
+  snprintf(buf, len, tr(STR_STATS_MONTH_DAYS_FORMAT), static_cast<unsigned>(days));
+}
+
 Rect coverImageRectForFrame(const Rect& coverRect);
 
 void drawCenteredStatsRow(const GfxRenderer& renderer, const uint8_t* icon, const int iconSize, const char* label,
@@ -195,12 +210,20 @@ int progressLabelBottomY(const GfxRenderer& renderer, const Rect& coverRect, con
 
 void drawStatsOverlay(const GfxRenderer& renderer, const GlobalReadingStats& globalStats, const Rect& coverRect,
                       const float progressPercent, const bool inverted) {
+#if defined(SIMULATOR)
+  if (!shouldShowRtcBasedReadingStats()) {
+    return;
+  }
+#else
   if (!gpio.deviceIsX3()) {
     return;
   }
+#endif
 
   char streakBuf[48];
   formatStreakStat(globalStats, streakBuf, sizeof(streakBuf));
+  char monthDaysBuf[48];
+  formatMonthDaysStat(globalStats, monthDaysBuf, sizeof(monthDaysBuf));
   const char* readerLabel = readerTypeLabel(globalStats);
 
   const int readerRegionTop = 0;
@@ -208,9 +231,21 @@ void drawStatsOverlay(const GfxRenderer& renderer, const GlobalReadingStats& glo
   drawCenteredStatsRow(renderer, readerTypeIcon(globalStats), kStatsFooterReaderIconSize, readerLabel, readerRegionTop,
                        readerRegionBottom, inverted);
 
-  const int streakRegionTop = progressLabelBottomY(renderer, coverRect, progressPercent);
-  const int streakRegionBottom = renderer.getScreenHeight();
-  drawCenteredStatsRow(renderer, StreakIcon, kStatsFooterStreakIconSize, streakBuf, streakRegionTop, streakRegionBottom,
+  const int footerRegionTop = progressLabelBottomY(renderer, coverRect, progressPercent);
+  const int footerRegionBottom = renderer.getScreenHeight();
+  const int footerRegionHeight = footerRegionBottom - footerRegionTop;
+  const int labelLineHeight = renderer.getLineHeight(UI_10_FONT_ID);
+  const int rowHeight = std::max(labelLineHeight, kStatsFooterStreakIconSize);
+  const int stackedRowGap = 4;
+  const int stackedRowsHeight = rowHeight * 2 + stackedRowGap;
+  const int stackedTop = footerRegionTop + std::max(0, footerRegionHeight - stackedRowsHeight) / 2;
+  const int streakRegionBottom = stackedTop + rowHeight;
+  const int monthRegionTop = streakRegionBottom + stackedRowGap;
+  const int monthRegionBottom = monthRegionTop + rowHeight;
+
+  drawCenteredStatsRow(renderer, StreakIcon, kStatsFooterStreakIconSize, streakBuf, stackedTop, streakRegionBottom,
+                       inverted);
+  drawCenteredStatsRow(renderer, Book24Icon, kStatsFooterReaderIconSize, monthDaysBuf, monthRegionTop, monthRegionBottom,
                        inverted);
 }
 

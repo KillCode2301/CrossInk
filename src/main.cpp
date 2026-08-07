@@ -101,6 +101,7 @@ inline esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause() { return ESP_SLEEP_
 
 #include "simulator/SimulatorHomeKeyInput.h"
 #include "simulator/SimulatorSmokeTest.h"
+#include "simulator/SimulatorStatsSeed.h"
 #endif
 #include "images/LoadingIcon.h"
 #include "util/ButtonNavigator.h"
@@ -875,7 +876,11 @@ void setup() {
   HalSystem::checkPanic();
 
   SETTINGS.loadFromFile();
+#ifndef SIMULATOR
   Storage.installDateTimeCallback(&SETTINGS.clockUtcOffsetQ);
+#else
+  seedSimulatorReadingStatsIfRequested();
+#endif
   APP_STATE.loadFromFile();
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));
   if (!isNetworkResume) {

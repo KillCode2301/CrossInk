@@ -62,3 +62,26 @@ The `H` mapping is active only in `x4-pro-simulator`.
 On first open of an EPUB, an **Indexing...** popup appears while the section cache is built in `.crosspoint/`.
 
 If rendering looks stale after a code change, delete `./fs_/.crosspoint/` to clear simulator caches.
+
+## Reading Stats Preview
+
+The simulator has no DS3231 RTC, so monthly reading stats (days read this/last month, streaks, charts) are hidden by default — the same gate as X4 hardware without a clock.
+
+To preview monthly reading stats in the simulator:
+
+```sh
+CROSSINK_SIMULATOR_FAKE_RTC=1 CROSSINK_SIMULATOR_SEED_STATS=1 pio run -e simulator -t exec
+```
+
+Or run the built binary directly:
+
+```sh
+CROSSINK_SIMULATOR_FAKE_RTC=1 CROSSINK_SIMULATOR_SEED_STATS=1 .pio/build/simulator/program
+```
+
+- `CROSSINK_SIMULATOR_FAKE_RTC=1` — uses the host system date/time as a stand-in RTC.
+- `CROSSINK_SIMULATOR_SEED_STATS=1` — writes dummy `/.crosspoint/global_stats.bin` with reading days in the current and previous month.
+
+Then open **Home → Reading Stats** (global All Books card). The third row should show **This Month**, **Last Month**, and **Longest Streak**.
+
+For Minimal Stats sleep overlay preview, set the sleep screen to Minimal Stats in settings (or `crossink-settings.json`) and sleep while a book is open.

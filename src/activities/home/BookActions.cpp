@@ -27,9 +27,11 @@
 namespace BookActions {
 namespace {
 
-bool hasReadingStats(const std::string& path) {
+bool supportsReadingStats(const std::string& path) {
   return FsHelpers::hasEpubExtension(path) || FsHelpers::hasXtcExtension(path);
 }
+
+}  // namespace
 
 std::string bookStatsCachePath(const std::string& path) {
   if (FsHelpers::hasEpubExtension(path)) {
@@ -41,7 +43,13 @@ std::string bookStatsCachePath(const std::string& path) {
   return "";
 }
 
-}  // namespace
+bool bookHasReadingStats(const std::string& path) {
+  const std::string cachePath = bookStatsCachePath(path);
+  if (cachePath.empty()) {
+    return false;
+  }
+  return hasAnyBookStats(BookReadingStats::load(cachePath));
+}
 
 std::vector<FileBrowserActionActivity::MenuItem> buildBookActionItems(const std::string& fullPath,
                                                                       const bool includeRemoveFromRecents) {
@@ -55,7 +63,7 @@ std::vector<FileBrowserActionActivity::MenuItem> buildBookActionItems(const std:
     items.push_back({FileBrowserAction::EpubRenderMode, StrId::STR_EPUB_RENDER_MODE});
     items.push_back({FileBrowserAction::ResetReaderSettings, StrId::STR_RESET_BOOK_READER_SETTINGS});
   }
-  if (hasReadingStats(fullPath)) {
+  if (supportsReadingStats(fullPath)) {
     items.push_back({FileBrowserAction::DeleteStats, StrId::STR_DELETE_BOOK_STATS});
     items.push_back({FileBrowserAction::ToggleCompleted,
                      isBookCompleted(fullPath) ? StrId::STR_MARK_UNFINISHED : StrId::STR_MARK_FINISHED});

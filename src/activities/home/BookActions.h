@@ -9,6 +9,9 @@ class GfxRenderer;
 
 namespace BookActions {
 
+std::string bookStatsCachePath(const std::string& path);
+bool bookHasReadingStats(const std::string& path);
+
 std::vector<FileBrowserActionActivity::MenuItem> buildBookActionItems(const std::string& fullPath,
                                                                       bool includeRemoveFromRecents);
 bool hasClearableBookCache(const std::string& path);

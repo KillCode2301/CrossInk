@@ -48,7 +48,7 @@ constexpr StatsLayout kDefaultLayout = {
     .cardGap = 26,
     .topCardTitleH = 36,
     .topCardH = 214,
-    .globalCardH = 154,
+    .globalCardH = 214,
     .sectionTitleH = 34,
     .sectionTitleFontId = UI_10_FONT_ID,
     .chartLabelFontId = UI_10_FONT_ID,
@@ -66,7 +66,7 @@ constexpr StatsLayout kCompactLayout = {
     .cardGap = 8,
     .topCardTitleH = 30,
     .topCardH = 156,
-    .globalCardH = 110,
+    .globalCardH = 150,
     .sectionTitleH = 30,
     .sectionTitleFontId = UI_10_FONT_ID,
     .chartLabelFontId = SMALL_FONT_ID,
@@ -85,6 +85,24 @@ constexpr std::array<StrId, READING_DAY_OF_WEEK_COUNT> DAY_LABELS = {
 
 const char* dayCountText(const uint16_t days) { return days == 1 ? tr(STR_STATS_DAY) : tr(STR_STATS_DAYS); }
 
+void formatDayCountValue(const uint16_t days, char* buf, const size_t len) {
+  if (days == 0) {
+    snprintf(buf, len, "-");
+    return;
+  }
+  snprintf(buf, len, "%u %s", static_cast<unsigned>(days), dayCountText(days));
+}
+
+void previousCalendarMonth(const uint16_t year, const uint8_t month, uint16_t& outYear, uint8_t& outMonth) {
+  if (month <= 1) {
+    outYear = static_cast<uint16_t>(year - 1);
+    outMonth = 12;
+    return;
+  }
+  outYear = year;
+  outMonth = static_cast<uint8_t>(month - 1);
+}
+
 int sectionCardHeight(const StatsLayout& layout, const int rowCount) {
   if (rowCount <= 0) {
     return layout.sectionTitleH + layout.chartTopPadding + layout.chartBottomPadding;
@@ -94,7 +112,7 @@ int sectionCardHeight(const StatsLayout& layout, const int rowCount) {
          (rowCount - 1) * rowStride;
 }
 
-bool shouldShowRtcBasedStats() { return halClock.isAvailable(); }
+bool shouldShowRtcBasedStats() { return shouldShowRtcBasedReadingStats(); }
 
 int noRtcCardBaseHeight(const StatsLayout& layout) { return layout.globalCardH; }
 
@@ -124,7 +142,7 @@ int perBookRtcTopCardHeight(const StatsLayout& layout, const int extraHeight) {
 
 int globalRtcCardHeightForPerBookRowSpacing(const StatsLayout& layout, const int perBookExtraHeight) {
   constexpr int perBookDataRowCount = 3;
-  constexpr int globalDataRowCount = 2;
+  constexpr int globalDataRowCount = 3;
   const int perBookDataRowH =
       (perBookRtcTopCardHeight(layout, perBookExtraHeight) - layout.topCardTitleH) / perBookDataRowCount;
   return std::max(layout.globalCardH, layout.topCardTitleH + perBookDataRowH * globalDataRowCount);
@@ -381,7 +399,8 @@ void drawGlobalStatsCard(GfxRenderer& renderer, const int x, const int y, const 
 
   const int thirdW = w / 3;
   const int halfW = w / 2;
-  const int rowH = (h - layout.topCardTitleH) / 2;
+  const int rowCount = showRtcStats ? 3 : 2;
+  const int rowH = (h - layout.topCardTitleH) / rowCount;
   char buf[40];
 
   snprintf(buf, sizeof(buf), "%lu", static_cast<unsigned long>(stats.totalSessions));
@@ -405,13 +424,39 @@ void drawGlobalStatsCard(GfxRenderer& renderer, const int x, const int y, const 
     ReadingStatsDateTime today;
     const bool hasToday = getCurrentLocalReadingStatsDateTime(today);
     const uint16_t currentStreak = hasToday ? stats.currentReadingStreak(&today.date) : 0;
-    if (currentStreak > 0) {
-      snprintf(buf, sizeof(buf), "%u %s", static_cast<unsigned>(currentStreak), dayCountText(currentStreak));
+    formatDayCountValue(currentStreak, buf, sizeof(buf));
+    drawStatCell(renderer, x + thirdW, thirdW, y + layout.topCardTitleH + rowH, rowH, buf,
+                 tr(STR_STATS_READING_STREAK_LBL));
+
+    if (stats.completedBooks > 0) {
+      snprintf(buf, sizeof(buf), "%lu", static_cast<unsigned long>(stats.completedBooks));
     } else {
       snprintf(buf, sizeof(buf), "-");
     }
-    drawStatCell(renderer, x + thirdW, thirdW, y + layout.topCardTitleH + rowH, rowH, buf,
-                 tr(STR_STATS_READING_STREAK_LBL));
+    drawStatCell(renderer, x + thirdW * 2, thirdW, y + layout.topCardTitleH + rowH, rowH, buf,
+                 tr(STR_STATS_COMPLETED_LBL));
+
+    const uint16_t thisMonthDays =
+        hasToday ? stats.daysReadInMonth(today.date.year, today.date.month) : 0;
+    formatDayCountValue(thisMonthDays, buf, sizeof(buf));
+    drawStatCell(renderer, x, thirdW, y + layout.topCardTitleH + rowH * 2, rowH, buf, tr(STR_STATS_THIS_MONTH_LBL));
+
+    uint16_t lastMonthYear = 0;
+    uint8_t lastMonthMonth = 0;
+    if (hasToday) {
+      previousCalendarMonth(today.date.year, today.date.month, lastMonthYear, lastMonthMonth);
+    }
+    const uint16_t lastMonthDays =
+        hasToday ? stats.daysReadInMonth(lastMonthYear, lastMonthMonth) : 0;
+    formatDayCountValue(lastMonthDays, buf, sizeof(buf));
+    drawStatCell(renderer, x + thirdW, thirdW, y + layout.topCardTitleH + rowH * 2, rowH, buf,
+                 tr(STR_STATS_LAST_MONTH_LBL));
+
+    const uint16_t longestStreak = stats.displayLongestReadingStreak();
+    formatDayCountValue(longestStreak, buf, sizeof(buf));
+    drawStatCell(renderer, x + thirdW * 2, thirdW, y + layout.topCardTitleH + rowH * 2, rowH, buf,
+                 tr(STR_STATS_LONGEST_STREAK_LBL));
+    return;
   }
 
   if (stats.completedBooks > 0) {
@@ -419,8 +464,7 @@ void drawGlobalStatsCard(GfxRenderer& renderer, const int x, const int y, const 
   } else {
     snprintf(buf, sizeof(buf), "-");
   }
-  drawStatCell(renderer, showRtcStats ? x + thirdW * 2 : x + halfW, showRtcStats ? thirdW : halfW,
-               y + layout.topCardTitleH + rowH, rowH, buf, tr(STR_STATS_COMPLETED_LBL));
+  drawStatCell(renderer, x + halfW, halfW, y + layout.topCardTitleH + rowH, rowH, buf, tr(STR_STATS_COMPLETED_LBL));
 }
 
 void drawDateField(const GfxRenderer& renderer, const int x, const int y, const int w, const char* text,
@@ -628,6 +672,57 @@ void renderNoRtcCombinedStatsPage(GfxRenderer& renderer, const MappedInputManage
   if (showButtonHints && mappedInput) {
     const auto labels = mappedInput->mapLabels(tr(STR_BACK), "", "", "");
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4, true);
+  }
+}
+
+void renderBooksWithStatsHomePage(GfxRenderer& renderer, const MappedInputManager* mappedInput,
+                                  const std::string& bookTitle, const BookReadingStats& bookStats,
+                                  const float progressPercent, const GlobalReadingStats& deviceStats,
+                                  const GlobalReadingStats* allDevicesStats, const bool showBookNavigation) {
+  constexpr bool showButtonHints = true;
+  renderer.clearScreen();
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto& layout = getNoRtcCombinedLayout(renderer, showButtonHints, allDevicesStats != nullptr);
+  CompactHeader::drawTitle(renderer, tr(STR_READING_STATS));
+  const int screenW = renderer.getScreenWidth();
+  const int cardX = metrics.contentSidePadding;
+  const int cardW = screenW - metrics.contentSidePadding * 2;
+  const int availableHeight =
+      renderer.getScreenHeight() - metrics.topPadding - statsBottomInset(metrics, showButtonHints);
+  const int compactContentHeight = noRtcCombinedContentHeight(layout, allDevicesStats != nullptr);
+  const int extraHeight = std::max(0, availableHeight - compactContentHeight);
+  const int visibleCardCount = allDevicesStats ? 3 : 2;
+  const int extraPerCard = visibleCardCount > 0 ? extraHeight / visibleCardCount : 0;
+  const int extraRemainder = visibleCardCount > 0 ? extraHeight % visibleCardCount : 0;
+  const int perBookExtraHeight = extraPerCard + (extraRemainder > 0 ? 1 : 0);
+  const int deviceExtraHeight = extraPerCard + (extraRemainder > 1 ? 1 : 0);
+  const int allDevicesExtraHeight = allDevicesStats ? extraPerCard : 0;
+  const int perBookCardH = noRtcCardBaseHeight(layout) + perBookExtraHeight;
+  const int deviceCardH = layout.globalCardH + deviceExtraHeight;
+  const int allDevicesCardH = layout.globalCardH + allDevicesExtraHeight;
+
+  int y = metrics.topPadding + std::min(metrics.headerHeight, layout.headerHeight) + layout.topGap;
+  drawPerBookStatsCard(renderer, cardX, y, cardW, perBookCardH, bookTitle, bookStats, progressPercent, false, 0,
+                       layout);
+  y += perBookCardH + layout.cardGap;
+
+  drawGlobalStatsCard(renderer, cardX, y, cardW, deviceCardH, tr(STR_STATS_THIS_DEVICE_SCREEN), deviceStats, layout);
+  y += deviceCardH;
+
+  if (allDevicesStats) {
+    y += layout.cardGap;
+    drawGlobalStatsCard(renderer, cardX, y, cardW, allDevicesCardH, tr(STR_STATS_ALL_DEVICES_SCREEN), *allDevicesStats,
+                        layout);
+  }
+
+  if (mappedInput) {
+    if (showBookNavigation) {
+      const auto labels = mappedInput->mapLabels(tr(STR_BACK), "", tr(STR_PREV_BOOK), tr(STR_NEXT_BOOK));
+      GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4, true);
+    } else {
+      const auto labels = mappedInput->mapLabels(tr(STR_BACK), "", "", "");
+      GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4, true);
+    }
   }
 }
 

@@ -40,6 +40,7 @@ bool readingStatsDateFromDayIndex(uint32_t dayIndex, ReadingStatsDate& outDate);
 uint8_t readingStatsDayOfWeekIndex(const ReadingStatsDate& date);  // Monday = 0
 ReadingTimeBucket readingTimeBucketForHour(uint8_t hour);
 bool getCurrentLocalReadingStatsDateTime(ReadingStatsDateTime& outDateTime);
+bool shouldShowRtcBasedReadingStats();
 uint16_t readingSpanDaysInclusive(const ReadingStatsDate& start, const ReadingStatsDate& end);
 uint16_t readingSpanDaysElapsed(const ReadingStatsDate& start, const ReadingStatsDate& end);
 void formatReadingStatsShortDate(const ReadingStatsDate& date, char* buf, size_t len);
@@ -57,3 +58,7 @@ void mergeReadingHistory(uint32_t& targetAnchorDay, std::array<uint8_t, READING_
 uint16_t computeReadingHistoryLongestStreak(uint32_t anchorDay, const std::array<uint8_t, READING_HISTORY_BYTES>& bits);
 uint16_t computeReadingHistoryCurrentStreak(uint32_t anchorDay, const std::array<uint8_t, READING_HISTORY_BYTES>& bits,
                                             const ReadingStatsDate* today);
+bool isReadingHistoryDaySet(uint32_t anchorDay, const std::array<uint8_t, READING_HISTORY_BYTES>& bits,
+                            uint32_t dayIndex);
+uint16_t countReadingHistoryDaysInMonth(uint32_t anchorDay, const std::array<uint8_t, READING_HISTORY_BYTES>& bits,
+                                        uint16_t year, uint8_t month);

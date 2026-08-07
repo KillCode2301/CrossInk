@@ -83,6 +83,7 @@ class HomeActivity final : public Activity {
   void onFileTransferOpen();
   void onOpdsBrowserOpen();
   void onReadingStatsOpen();
+  void openReadingStatsDirect();
   void onSavedItemsOpen();
 
   int getMenuItemCount() const;
